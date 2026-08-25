@@ -1,101 +1,240 @@
-# Sample GenLayer project
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/license/mit/)
-[![Discord](https://dcbadge.vercel.app/api/server/8Jm4v89VAu?compact=true&style=flat)](https://discord.gg/8Jm4v89VAu)
-[![Telegram](https://img.shields.io/badge/Telegram--T.svg?style=social&logo=telegram)](https://t.me/genlayer)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/yeagerai.svg?style=social&label=Follow%20%40GenLayer)](https://x.com/GenLayer)
-[![GitHub star chart](https://img.shields.io/github/stars/yeagerai/genlayer-project-boilerplate?style=social)](https://star-history.com/#yeagerai/genlayer-js)
+# Exception
 
-## 👀 About
-This project includes the boilerplate code for a GenLayer use case implementation, specifically a football bets game.
+Exception is a GenLayer Intelligent Contract for deciding whether a real-world situation legitimately qualifies for a predefined exception to a deterministic rule.
 
-## 📦 What's included
-- Basic requirements to deploy and test your intelligent contracts locally
-- Configuration file template
-<!-- - Test functions to write complete end-to-end tests -->
-- An example of an intelligent contract (Football Bets)
-- Example end-to-end tests for the contract provided
+Traditional smart contracts are good at enforcing rules such as:
 
-## 🛠️ Requirements
-- A running GenLayer Studio (Install from [Docs](https://docs.genlayer.com/developers/intelligent-contracts/tooling-setup#using-the-genlayer-studio) or work with the hosted version of [GenLayer Studio](https://studio.genlayer.com/)). If you are working locally, this repository code does not need to be located in the same directory as the Genlayer Studio.
+`condition met -> execute`
 
-## 🚀 Steps to run this example
+`condition not met -> reject`
 
-### 1. Configure environment
-   Rename the `.env.example` file to `.env`, then fill in the values for your configuration. The provided values are the standard values for a tipical GenLayer Studio deployed locally.
+But many real agreements contain clauses like:
 
-### 2. Deploy the contract
-   Deploy the contract from `/contracts/football_bets.py` using the Studio's UI:
-   1. Open the GenLayer Studio interface in your web browser (usually at http://localhost:8080).
-   2. Create a new file in the "Contracts" section and paste the content of `/contracts/football_bets.py` (the content is different than the existing contract from the examples).
-   3. Navigate to the "Run and Debug" section.
-   4. Follow the on-screen instructions to complete the deployment process.
+> Late submissions are rejected except where the delay resulted from circumstances outside the participant's reasonable control.
 
-### 3. Setup the frontend environment
-  1. All the content of the dApp is located in the `/app` folder.
-  2. Rename the `.env.example` file in the `/app` folder to `.env`.
-  3. Add the deployed contract address to the `/app/.env` under the variable `VITE_CONTRACT_ADDRESS`
+That final judgment is difficult to encode deterministically. Exception isolates that subjective step and resolves it through GenLayer validator consensus.
 
-### 4. Run the frontend Vue app
-   Ensure your GenLayer Studio is running, and execute the following commands in your terminal:
-   ```shell
-   cd app
-   npm install
-   npm run dev
-   ```
-   The terminal should display a link to access your frontend app (usually at http://localhost:5173/).
-   For more information on the code see [GenLayerJS](https://github.com/yeagerai/genlayer-js).
-   
-### 5. Test contracts
-1. Install the Python packages listed in the `requirements.txt` file in a virtual environment.
-2. Make sure your GenLayer Studio is running. Then execute the following command in your terminal:
-   ```shell
-   gltest
-   ```
+## Core flow
 
-## ⚽ How the Football Bets Contract Works
+`Base rule + exception clause + case + evidence -> GenLayer consensus -> GRANTED / DENIED / INCONCLUSIVE`
 
-The Football Bets contract allows users to create bets for football matches, resolve those bets, and earn points for correct bets. Here's a breakdown of its main functionalities:
+A deterministic system can therefore fail its normal rule, ask Exception whether the agreed exception applies, and then continue or reject based on the returned verdict.
 
-1. Creating Bets:
-   - Users can create a bet for a specific football match by providing the game date, team names, and their predicted winner.
-   - The contract checks if the game has already finished and if the user has already made a bet for this match.
+## Why GenLayer
 
-2. Resolving Bets:
-   - After a match has concluded, users can resolve their bets.
-   - The contract fetches the actual match result from a specified URL.
-   - If the Bet was correct, the user earns a point.
+Exception depends on interpretation rather than arithmetic. Validators must read the predefined natural-language exception clause, examine the case and submitted evidence, and decide whether the circumstances fall within that clause.
 
-3. Querying Data:
-   - Users can retrieve all bets.
-   - The contract also allows querying of points, either for all players or for a specific player.
+The contract uses `gl.vm.run_nondet` and independent validator evaluation. Consensus compares only the state-changing verdict, not free-form reasoning, so validators may explain the same conclusion differently without causing unnecessary disagreement.
 
-4. Getting Points:
-   - Points are awarded for correct bets.
-   - Users can check their total points or the points of any player.
+Supported verdicts:
 
-## 🧪 Tests
+- `GRANTED` — the evidence supports applying the exception.
+- `DENIED` — the evidence does not satisfy the exception clause.
+- `INCONCLUSIVE` — the available evidence is insufficient for a reliable decision.
 
-This project includes integration tests that interact with the contract deployed in the Studio. These tests cover the main functionalities of the Football Bets contract:
+## Contract design
 
-1. Creating a bet
-2. Resolving a bet
-3. Querying bets for a player
-4. Querying points for a player
+### Definitions
 
-The tests simulate real-world interactions with the contract, ensuring that it behaves correctly under various scenarios. They use the GenLayer Studio to deploy and interact with the contract, providing a comprehensive check of the contract's functionality in a controlled environment.
+The contract owner creates exception definitions containing:
 
-To run the tests, use the `gltest` command as mentioned in the "Steps to run this example" section.
+- deterministic base rule
+- natural-language exception clause
+- creator-scoped reference
+- creator address
+- deterministic SHA-256 fingerprint
 
+Definitions are stored before any case is evaluated, so the exception terms cannot be rewritten after seeing a particular dispute.
 
-## 💬 Community
-Connect with the GenLayer community to discuss, collaborate, and share insights:
-- **[Discord Channel](https://discord.gg/8Jm4v89VAu)**: Our primary hub for discussions, support, and announcements.
-- **[Telegram Group](https://t.me/genlayer)**: For more informal chats and quick updates.
+### Cases
 
-Your continuous feedback drives better product development. Please engage with us regularly to test, discuss, and improve GenLayer.
+Any caller can submit a case against an existing definition with:
 
-## 📖 Documentation
-For detailed information on how to use GenLayerJS SDK, please refer to our [documentation](https://docs.genlayer.com/).
+- case description
+- evidence
+- submitter-scoped reference
+- submitter address
+- definition ID
+- deterministic SHA-256 fingerprint
 
-## 📜 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+New cases begin in `PENDING` state.
+
+### Resolution
+
+`resolve_case(case_id)` asks GenLayer validators whether the submitted circumstances satisfy the stored exception clause.
+
+The model output is strictly validated and must contain exactly:
+
+```json
+{
+  "verdict": "GRANTED | DENIED | INCONCLUSIVE",
+  "reasoning": "..."
+}
+```
+
+After successful consensus, the case becomes `RESOLVED` and the final verdict and leader reasoning are persisted onchain. A resolved case cannot be resolved again.
+
+State is updated only after consensus succeeds, preventing failed or malformed resolutions from partially mutating a case.
+
+## Public methods
+
+### Writes
+
+- `create_definition(base_rule, exception_clause, reference)`
+- `submit_case(definition_id, case_description, evidence, case_reference)`
+- `resolve_case(case_id)`
+
+### Views
+
+- `ping()`
+- `get_definition_count()`
+- `get_case_count()`
+- `get_definition(definition_id)`
+- `get_case(case_id)`
+- `is_definition_reference_used(creator, reference)`
+- `is_case_reference_used(submitter, reference)`
+
+## Testing
+
+The contract has a comprehensive direct-mode test suite covering:
+
+- definition creation
+- owner-only definition creation
+- creator-scoped references
+- case creation
+- submitter-scoped case references
+- `GRANTED`
+- `DENIED`
+- `INCONCLUSIVE`
+- malformed model responses
+- same verdict with different reasoning
+- validator disagreement on different verdicts
+- duplicate resolution prevention
+- persistence
+- deterministic fingerprints
+- invalid IDs
+- empty and oversized input rejection
+- failed resolution without partial state mutation
+
+Final local verification:
+
+```text
+23 passed
+```
+
+Python syntax checks also passed before deployment.
+
+## Bradbury deployment
+
+Network: GenLayer Bradbury
+
+Contract:
+
+```text
+0x5881B3312124caaD9b901577951C22c1C34723df
+```
+
+Deployment transaction:
+
+```text
+0xfcd3dca5b795514b2d69f718d6bfed5ce334f6dea8759088a35dcbdc3bf4e88a
+```
+
+Deployment completed with:
+
+```text
+ACCEPTED
+AGREE
+FINISHED_WITH_RETURN
+```
+
+`ping()` returned:
+
+```text
+exception-v1
+```
+
+## Live Bradbury proof
+
+A live definition was created with the rule:
+
+> Grant milestones submitted after August 30 are rejected.
+
+and the exception clause:
+
+> A late milestone may be accepted when the delay resulted from circumstances outside the participant's reasonable control.
+
+Definition transaction:
+
+```text
+0x38bf70283d55996a5b15e5826d8fca99cc2442bfa1843a896396fa671b54d795
+```
+
+A case was submitted describing a September 2 milestone submission with evidence that a critical deployment provider outage prevented timely submission.
+
+GenLayer resolved the case to:
+
+```text
+GRANTED
+```
+
+Resolution transaction:
+
+```text
+0x51b6d0f99e413e506b41e3c6165861e3eebe91567e64de1ab9212152f72481e0
+```
+
+The transaction completed with `ACCEPTED / AGREE / FINISHED_WITH_RETURN`; four validators agreed and one timed out. Reading the case afterward confirmed persisted state:
+
+```text
+status: RESOLVED
+verdict: GRANTED
+```
+
+The stored reasoning was:
+
+> The delay was caused by a critical deployment provider outage, which is outside the participant's reasonable control.
+
+## Example applications
+
+Exception can act as an interpretation layer beside deterministic contracts for:
+
+- grant deadlines
+- insurance exclusions and exceptions
+- escrow release conditions
+- SLA exceptions
+- procurement rules
+- DAO programs
+- vesting conditions
+- service agreements
+- deadline and force-majeure style clauses
+
+The deterministic contract remains responsible for normal execution. Exception handles only the part conventional smart contracts struggle with: deciding whether real-world circumstances fall within a previously agreed natural-language exception.
+
+## Development
+
+Install dependencies in a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Run the test suite:
+
+```bash
+gltest
+```
+
+Deploy to Bradbury with the GenLayer CLI:
+
+```bash
+genlayer deploy \
+  --contract contracts/exception.py \
+  --rpc https://rpc-bradbury.genlayer.com
+```
+
+## License
+
+MIT
