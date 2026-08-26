@@ -32,6 +32,14 @@ Supported verdicts:
 - `DENIED` — the evidence does not satisfy the exception clause.
 - `INCONCLUSIVE` — the available evidence is insufficient for a reliable decision.
 
+## Evidence trust boundary
+
+Exception evaluates the evidence submitted to the contract against the predefined exception clause. It does not independently verify that external events described in the evidence actually occurred.
+
+For example, if a caller submits evidence stating that a deployment provider outage caused a delay, Exception determines whether that circumstance would satisfy the stored exception clause. V1 does not independently prove the outage itself or verify external evidence provenance.
+
+This keeps the contract's responsibility precise: Exception performs consensus-based interpretation of submitted evidence against previously committed exception terms. External evidence verification can be supplied by a separate trusted or verifiable evidence layer when an application requires it.
+
 ## Contract design
 
 ### Definitions
