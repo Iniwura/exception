@@ -17,9 +17,9 @@ MAX_REASONING_LENGTH = 10000
 
 def _require_text(value: str, field: str, maximum: int) -> str:
     if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field} must not be empty")
+        raise gl.vm.UserError(f"{field} must not be empty")
     if len(value) > maximum:
-        raise ValueError(f"{field} is too long")
+        raise gl.vm.UserError(f"{field} is too long")
     return value
 
 
@@ -38,16 +38,16 @@ def _parse_response(response: typing.Any) -> dict:
     if isinstance(response, str):
         response = json.loads(response)
     if type(response) is not dict or set(response.keys()) != {"verdict", "reasoning"}:
-        raise ValueError("model response must contain only verdict and reasoning")
+        raise gl.vm.UserError("model response must contain only verdict and reasoning")
 
     verdict = response["verdict"]
     reasoning = response["reasoning"]
     if type(verdict) is not str or verdict not in {"GRANTED", "DENIED", "INCONCLUSIVE"}:
-        raise ValueError("model response contains an invalid verdict")
+        raise gl.vm.UserError("model response contains an invalid verdict")
     if type(reasoning) is not str or not reasoning.strip():
-        raise ValueError("model reasoning must be a non-empty string")
+        raise gl.vm.UserError("model reasoning must be a non-empty string")
     if len(reasoning) > MAX_REASONING_LENGTH:
-        raise ValueError("model reasoning is too long")
+        raise gl.vm.UserError("model reasoning is too long")
     return {"verdict": verdict, "reasoning": reasoning}
 
 
@@ -87,14 +87,12 @@ class Exception(gl.Contract):
         self.definition_count = u256(0)
         self.case_count = u256(0)
 
-    @staticmethod
-    def _reference_key(creator: str, reference: str) -> str:
+    def _reference_key(self, creator: str, reference: str) -> str:
         return creator + "\x00" + reference
 
-    @staticmethod
-    def _validate_id(identifier: int, count: u256, label: str) -> None:
+    def _validate_id(self, identifier: int, count: u256, label: str) -> None:
         if type(identifier) is not int or identifier < 0 or identifier >= int(count):
-            raise ValueError(f"unknown {label} id")
+            raise gl.vm.UserError(f"unknown {label} id")
 
     @gl.public.view
     def ping(self) -> str:
@@ -113,7 +111,7 @@ class Exception(gl.Contract):
         creator = _address(gl.message.sender_address)
         reference_key = self._reference_key(creator, reference)
         if self.definition_references.get(reference_key, False):
-            raise ValueError("reference already used by creator")
+            raise gl.vm.UserError("reference already used by creator")
 
         definition_id = self.definition_count
         fingerprint = _fingerprint({
@@ -149,7 +147,7 @@ class Exception(gl.Contract):
         submitter = _address(gl.message.sender_address)
         reference_key = self._reference_key(submitter, case_reference)
         if self.case_references.get(reference_key, False):
-            raise ValueError("case reference already used by submitter")
+            raise gl.vm.UserError("case reference already used by submitter")
 
         case_id = self.case_count
         fingerprint = _fingerprint({
@@ -201,7 +199,7 @@ class Exception(gl.Contract):
     def resolve_case(self, case_id: int) -> dict:
         self._validate_id(case_id, self.case_count, "case")
         if self.cases[case_id].status != "PENDING":
-            raise ValueError("case has already been resolved")
+            raise gl.vm.UserError("case has already been resolved")
         prompt = self._prompt(case_id)
 
         def leader():
